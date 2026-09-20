@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHubTimer</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero-panel">
+      <div class="hero-copy">
+        <p class="eyebrow">Focus sessions as living contribution squares</p>
+        <h1>GitHubTimer</h1>
+        <p class="hero-description">
+          A dark, minimal clock and focus timer where the contribution grid is the display.
+        </p>
+      </div>
+
+      <div class="mode-toggle" aria-label="Display mode">
+        <button type="button" class="mode-button is-active" data-mode="clock" aria-pressed="true">Clock</button>
+        <button type="button" class="mode-button" data-mode="timer" aria-pressed="false">Timer</button>
+      </div>
+
+      <div class="display-card">
+        <div id="status-pill" class="status-pill">Clock mode</div>
+        <div id="display-grid" class="display-grid" aria-live="polite" aria-label="Contribution grid time display"></div>
+      </div>
+    </section>
+
+    <section class="control-panel">
+      <div class="timer-panel">
+        <div class="timer-inputs">
+          <label>
+            <span>Hours</span>
+            <input id="hours-input" type="number" min="0" max="99" inputmode="numeric" value="0">
+          </label>
+          <label>
+            <span>Minutes</span>
+            <input id="minutes-input" type="number" min="0" max="59" inputmode="numeric" value="25">
+          </label>
+          <label>
+            <span>Seconds</span>
+            <input id="seconds-input" type="number" min="0" max="59" inputmode="numeric" value="0">
+          </label>
+          <label class="label-select">
+            <span>Session label</span>
+            <select id="session-label">
+              <option value="Coding">Coding</option>
+              <option value="Studying">Studying</option>
+              <option value="Project">Project</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="preset-row" aria-label="Timer presets">
+          <button type="button" class="preset-button" data-preset="300000">5m</button>
+          <button type="button" class="preset-button" data-preset="900000">15m</button>
+          <button type="button" class="preset-button is-selected" data-preset="1500000">25m</button>
+          <button type="button" class="preset-button" data-preset="3600000">60m</button>
+        </div>
+
+        <div class="control-row">
+          <button type="button" id="start-button" class="action-button primary">Start</button>
+          <button type="button" id="pause-button" class="action-button">Pause</button>
+          <button type="button" id="resume-button" class="action-button">Resume</button>
+          <button type="button" id="reset-button" class="action-button">Reset</button>
+        </div>
+      </div>
+
+      <div class="stats-panel">
+        <div class="stat-card">
+          <span class="stat-label">Today</span>
+          <strong id="today-focus">0m</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Streak</span>
+          <strong id="current-streak">0</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Sessions</span>
+          <strong id="total-sessions">0</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Total focus</span>
+          <strong id="total-focus">0m</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="history-panel">
+      <div class="history-header">
+        <div>
+          <p class="eyebrow">Historical focus</p>
+          <h2>Contribution graph</h2>
+        </div>
+        <div class="data-actions">
+          <button type="button" id="export-button" class="action-button">Export Data</button>
+          <button type="button" id="import-button" class="action-button" aria-controls="import-file-input">Import Data</button>
+          <button type="button" id="reset-data-button" class="action-button danger">Reset Data</button>
+          <input id="import-file-input" class="visually-hidden" type="file" accept="application/json,.json" aria-label="Import timer data JSON file">
+        </div>
+      </div>
+
+      <div id="contribution-graph" class="contribution-graph" role="list" aria-label="Focus contribution graph"></div>
+
+      <div class="graph-footer">
+        <span>Less</span>
+        <div class="legend">
+          <span class="legend-cell level-0"></span>
+          <span class="legend-cell level-1"></span>
+          <span class="legend-cell level-2"></span>
+          <span class="legend-cell level-3"></span>
+          <span class="legend-cell level-4"></span>
+        </div>
+        <span>More</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="./script.js"></script>
+</body>
+</html>
