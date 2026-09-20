@@ -1,4 +1,63 @@
 const STORAGE_KEY = "github-timer-state-v1";
+const THEMES = [
+  {
+    name: "forest",
+    bg: "#0d1117",
+    panel: "rgba(22, 27, 34, 0.92)",
+    panelStrong: "#161b22",
+    border: "rgba(240, 246, 252, 0.08)",
+    text: "#e6edf3",
+    muted: "#8b949e",
+    accent: "#39d353",
+    accentSoft: "rgba(35, 134, 54, 0.22)",
+    accentStrong: "rgba(57, 211, 83, 0.42)",
+    danger: "#ff6b6b",
+    dangerSoft: "rgba(255, 107, 107, 0.14)",
+    level0: "#161b22",
+    level1: "#0e4429",
+    level2: "#006d32",
+    level3: "#26a641",
+    level4: "#39d353",
+  },
+  {
+    name: "midnight",
+    bg: "#0b1120",
+    panel: "rgba(15, 23, 42, 0.9)",
+    panelStrong: "#111827",
+    border: "rgba(148, 163, 184, 0.2)",
+    text: "#e2e8f0",
+    muted: "#94a3b8",
+    accent: "#60a5fa",
+    accentSoft: "rgba(96, 165, 250, 0.24)",
+    accentStrong: "rgba(96, 165, 250, 0.44)",
+    danger: "#f87171",
+    dangerSoft: "rgba(248, 113, 113, 0.18)",
+    level0: "#111827",
+    level1: "#1d4ed8",
+    level2: "#2563eb",
+    level3: "#60a5fa",
+    level4: "#93c5fd",
+  },
+  {
+    name: "sunset",
+    bg: "#140f12",
+    panel: "rgba(38, 26, 32, 0.92)",
+    panelStrong: "#22181d",
+    border: "rgba(251, 191, 36, 0.2)",
+    text: "#fef3c7",
+    muted: "#d6b38c",
+    accent: "#f59e0b",
+    accentSoft: "rgba(245, 158, 11, 0.22)",
+    accentStrong: "rgba(245, 158, 11, 0.42)",
+    danger: "#fb7185",
+    dangerSoft: "rgba(251, 113, 133, 0.18)",
+    level0: "#2a1d23",
+    level1: "#7c2d12",
+    level2: "#c2410c",
+    level3: "#f59e0b",
+    level4: "#fbbf24",
+  },
+];
 const GLYPHS = {
   "0": [
     "11111",
@@ -99,6 +158,15 @@ const GLYPHS = {
     "1",
     "0",
   ],
+  "-": [
+    "00000",
+    "00000",
+    "01110",
+    "00000",
+    "00000",
+    "00000",
+    "00000",
+  ],
 };
 
 const elements = {
@@ -147,6 +215,7 @@ function loadState() {
       remainingMs: 25 * 60 * 1000,
       targetTime: null,
       pausedAt: null,
+      finishedAt: null,
     },
     sessions: [],
   };
@@ -179,7 +248,7 @@ function loadState() {
 
 function normalizeState() {
   state.mode = state.mode === "timer" ? "timer" : "clock";
-  state.timer.status = ["idle", "running", "paused"].includes(state.timer.status) ? state.timer.status : "idle";
+  state.timer.status = ["idle", "running", "paused", "finished"].includes(state.timer.status) ? state.timer.status : "idle";
   state.currentLabel = ["Coding", "Studying", "Project", "Other"].includes(state.currentLabel)
     ? state.currentLabel
     : "Coding";
@@ -196,6 +265,7 @@ function normalizeState() {
   state.timer.inputMs = Number(state.timer.inputMs);
   state.timer.remainingMs = Number(state.timer.remainingMs);
   state.timer.targetTime = state.timer.targetTime === null ? null : Number(state.timer.targetTime);
+  state.timer.finishedAt = state.timer.finishedAt === null ? null : Number(state.timer.finishedAt);
 
   if (!Number.isFinite(state.timer.inputMs) || state.timer.inputMs < 0) {
     state.timer.inputMs = 25 * 60 * 1000;
@@ -210,6 +280,7 @@ function normalizeState() {
       state.timer.status = "idle";
       state.timer.targetTime = null;
       state.timer.pausedAt = null;
+      state.timer.finishedAt = null;
       state.timer.remainingMs = state.timer.inputMs;
       syncInputsWithTimer(state.timer.remainingMs);
       saveState();
@@ -222,6 +293,14 @@ function normalizeState() {
       return;
     }
     state.timer.remainingMs = remainingMs;
+  }
+
+  if (state.timer.status === "finished") {
+    if (!Number.isFinite(state.timer.finishedAt)) {
+      state.timer.status = "idle";
+      state.timer.finishedAt = null;
+      state.timer.remainingMs = state.timer.inputMs;
+    }
   }
 
   syncInputsWithTimer(state.timer.remainingMs);
@@ -279,9 +358,10 @@ function startTicker() {
       }
     }
 
+    renderTheme();
     renderDisplay();
     renderStatus();
-  }, 250);
+  }, 1000);
 }
 
 function handleManualDurationChange() {
@@ -299,6 +379,7 @@ function setTimerFromDuration(durationMs) {
   state.timer.status = "idle";
   state.timer.targetTime = null;
   state.timer.pausedAt = null;
+  state.timer.finishedAt = null;
   syncInputsWithTimer(safeDuration);
   syncPresetSelection(safeDuration);
   saveState();
@@ -363,6 +444,7 @@ function pauseTimer() {
   state.timer.status = "paused";
   state.timer.targetTime = null;
   state.timer.pausedAt = Date.now();
+  state.timer.finishedAt = null;
   saveState();
   renderAll();
 }
@@ -376,6 +458,7 @@ function resumeTimer() {
   state.timer.status = "running";
   state.timer.targetTime = Date.now() + state.timer.remainingMs;
   state.timer.pausedAt = null;
+  state.timer.finishedAt = null;
   saveState();
   renderAll();
 }
@@ -384,6 +467,7 @@ function resetTimer() {
   state.timer.status = "idle";
   state.timer.targetTime = null;
   state.timer.pausedAt = null;
+  state.timer.finishedAt = null;
   state.timer.remainingMs = state.timer.inputMs;
   syncInputsWithTimer(state.timer.inputMs);
   saveState();
@@ -393,10 +477,11 @@ function resetTimer() {
 function finishTimer() {
   const completedDuration = state.timer.inputMs;
 
-  state.timer.status = "idle";
+  state.timer.status = "finished";
   state.timer.targetTime = null;
   state.timer.pausedAt = null;
-  state.timer.remainingMs = completedDuration;
+  state.timer.finishedAt = Date.now();
+  state.timer.remainingMs = 0;
   syncInputsWithTimer(completedDuration);
 
   state.sessions.push({
@@ -451,6 +536,7 @@ function importData(event) {
           status: "idle",
           targetTime: null,
           pausedAt: null,
+          finishedAt: null,
         },
       };
 
@@ -484,12 +570,41 @@ function resetAllData() {
 }
 
 function renderAll() {
+  renderTheme();
   renderMode();
   renderDisplay();
   renderStatus();
   renderControls();
   renderStats();
   renderGraph();
+}
+
+function renderTheme() {
+  const themeIndex = Math.floor(Date.now() / 8000) % THEMES.length;
+  const theme = THEMES[themeIndex];
+
+  const themeVars = {
+    bg: theme.bg,
+    panel: theme.panel,
+    "panel-strong": theme.panelStrong,
+    border: theme.border,
+    text: theme.text,
+    muted: theme.muted,
+    accent: theme.accent,
+    "accent-soft": theme.accentSoft,
+    "accent-strong": theme.accentStrong,
+    danger: theme.danger,
+    "danger-soft": theme.dangerSoft,
+    "level-0": theme.level0,
+    "level-1": theme.level1,
+    "level-2": theme.level2,
+    "level-3": theme.level3,
+    "level-4": theme.level4,
+  };
+
+  Object.entries(themeVars).forEach(([key, value]) => {
+    document.documentElement.style.setProperty(`--${key}`, value);
+  });
 }
 
 function renderMode() {
@@ -502,7 +617,9 @@ function renderMode() {
 
 function renderDisplay() {
   const displayText = state.mode === "clock" ? getCurrentTimeString() : formatDurationAsClock(getDisplayDuration());
-  const frameSeed = Math.floor(Date.now() / 800);
+  const frameSeed = Math.floor(Date.now() / 1000);
+  const isNegativeDisplay = state.mode === "timer" && state.timer.status === "finished" && getDisplayDuration() < 0;
+  elements.displayGrid.classList.toggle("is-negative", isNegativeDisplay);
   elements.displayGrid.innerHTML = "";
 
   [...displayText].forEach((character, charIndex) => {
@@ -535,18 +652,29 @@ function renderStatus() {
       label = `Running • ${state.currentLabel}`;
     } else if (state.timer.status === "paused") {
       label = `Paused • ${state.currentLabel}`;
+    } else if (state.timer.status === "finished") {
+      label = `Ended • ${state.currentLabel}`;
     } else {
       label = `Timer ready • ${state.currentLabel}`;
     }
   }
 
   elements.statusPill.textContent = label;
+  elements.statusPill.classList.toggle("is-negative", state.mode === "timer" && state.timer.status === "finished");
 }
 
 function getDisplayDuration() {
   if (state.timer.status === "running") {
     return Math.max(0, state.timer.targetTime - Date.now());
   }
+
+  if (state.timer.status === "finished") {
+    if (!Number.isFinite(state.timer.finishedAt)) {
+      return 0;
+    }
+    return -(Date.now() - state.timer.finishedAt);
+  }
+
   return state.timer.remainingMs;
 }
 
@@ -554,6 +682,7 @@ function renderControls() {
   const isTimerMode = state.mode === "timer";
   const isRunning = state.timer.status === "running";
   const isPaused = state.timer.status === "paused";
+  const isFinished = state.timer.status === "finished";
 
   const inputsDisabled = isRunning;
   elements.hoursInput.disabled = inputsDisabled;
@@ -564,7 +693,7 @@ function renderControls() {
     button.disabled = inputsDisabled;
   });
 
-  elements.startButton.disabled = !isTimerMode || isRunning;
+  elements.startButton.disabled = !isTimerMode || isRunning || isFinished;
   elements.pauseButton.disabled = !isTimerMode || !isRunning;
   elements.resumeButton.disabled = !isTimerMode || !isPaused;
   elements.resetButton.disabled = !isTimerMode;
@@ -644,11 +773,12 @@ function getCurrentTimeString() {
 }
 
 function formatDurationAsClock(durationMs) {
-  const totalSeconds = Math.max(0, Math.ceil(durationMs / 1000));
+  const isNegative = durationMs < 0;
+  const totalSeconds = Math.max(0, Math.ceil(Math.abs(durationMs) / 1000));
   const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
   const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
   const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${hours}:${minutes}:${seconds}`;
+  return `${isNegative ? "-" : ""}${hours}:${minutes}:${seconds}`;
 }
 
 function formatDuration(durationMs) {
@@ -670,7 +800,10 @@ function formatDuration(durationMs) {
 }
 
 function getDisplayLevel(charIndex, rowIndex, columnIndex, frameSeed) {
-  return 1 + ((charIndex * 5 + rowIndex * 3 + columnIndex + frameSeed) % 4);
+  const slowCycle = Math.floor(Date.now() / 8000);
+  const isHourOrMinuteDigit = charIndex <= 1 || (charIndex >= 3 && charIndex <= 4);
+  const cycleSeed = isHourOrMinuteDigit ? slowCycle : frameSeed;
+  return 1 + ((charIndex * 5 + rowIndex * 3 + columnIndex + cycleSeed) % 4);
 }
 
 function getGraphLevel(durationMs) {
