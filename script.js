@@ -172,6 +172,7 @@ function loadState() {
     };
   } catch (error) {
     console.warn("Unable to load saved state.", error);
+    localStorage.removeItem(STORAGE_KEY);
     return fallback;
   }
 }
@@ -423,7 +424,12 @@ function importData(event) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const imported = JSON.parse(reader.result);
+      const rawContents = reader.result;
+      if (typeof rawContents !== "string") {
+        throw new Error("Imported file contents were unavailable.");
+      }
+
+      const imported = JSON.parse(rawContents);
       if (!isRecord(imported)) {
         throw new Error("Imported data must be an object.");
       }
@@ -439,9 +445,6 @@ function importData(event) {
         },
       };
 
-      state.timer.status = "idle";
-      state.timer.targetTime = null;
-      state.timer.pausedAt = null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(safeImported));
       Object.assign(state, loadState());
       normalizeState();
