@@ -152,7 +152,7 @@ function loadState() {
   };
 
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = safeStorageGet(STORAGE_KEY);
     if (!saved) {
       return fallback;
     }
@@ -172,7 +172,7 @@ function loadState() {
     };
   } catch (error) {
     console.warn("Unable to load saved state.", error);
-    localStorage.removeItem(STORAGE_KEY);
+    safeStorageRemove(STORAGE_KEY);
     return fallback;
   }
 }
@@ -185,7 +185,12 @@ function normalizeState() {
     : "Coding";
 
   state.sessions = state.sessions
-    .filter((session) => session && Number.isFinite(session.durationMs) && session.completedAt)
+    .filter((session) => {
+      if (!session || !Number.isFinite(session.durationMs) || !session.completedAt) {
+        return false;
+      }
+      return Number.isFinite(new Date(session.completedAt).getTime());
+    })
     .sort((left, right) => new Date(left.completedAt) - new Date(right.completedAt));
 
   state.timer.inputMs = Number(state.timer.inputMs);
@@ -412,7 +417,7 @@ function exportData() {
   anchor.href = url;
   anchor.download = `github-timer-export-${new Date().toISOString().slice(0, 10)}.json`;
   anchor.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function importData(event) {
@@ -445,7 +450,7 @@ function importData(event) {
         },
       };
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(safeImported));
+      safeStorageSet(STORAGE_KEY, JSON.stringify(safeImported));
       Object.assign(state, loadState());
       normalizeState();
       renderAll();
@@ -463,7 +468,7 @@ function resetAllData() {
     return;
   }
 
-  localStorage.removeItem(STORAGE_KEY);
+  safeStorageRemove(STORAGE_KEY);
   const fresh = loadState();
   Object.assign(state, fresh);
   normalizeState();
@@ -691,6 +696,33 @@ function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function safeStorageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    console.warn("Unable to read saved state.", error);
+    return null;
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    console.warn("Unable to save state.", error);
+    return false;
+  }
+}
+
+function safeStorageRemove(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.warn("Unable to clear saved state.", error);
+  }
+}
+
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  safeStorageSet(STORAGE_KEY, JSON.stringify(state));
 }
