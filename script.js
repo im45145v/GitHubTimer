@@ -1,63 +1,5 @@
 const STORAGE_KEY = "github-timer-state-v1";
-const THEMES = [
-  {
-    name: "forest",
-    bg: "#0d1117",
-    panel: "rgba(22, 27, 34, 0.92)",
-    panelStrong: "#161b22",
-    border: "rgba(240, 246, 252, 0.08)",
-    text: "#e6edf3",
-    muted: "#8b949e",
-    accent: "#39d353",
-    accentSoft: "rgba(35, 134, 54, 0.22)",
-    accentStrong: "rgba(57, 211, 83, 0.42)",
-    danger: "#ff6b6b",
-    dangerSoft: "rgba(255, 107, 107, 0.14)",
-    level0: "#161b22",
-    level1: "#0e4429",
-    level2: "#006d32",
-    level3: "#26a641",
-    level4: "#39d353",
-  },
-  {
-    name: "midnight",
-    bg: "#0b1120",
-    panel: "rgba(15, 23, 42, 0.9)",
-    panelStrong: "#111827",
-    border: "rgba(148, 163, 184, 0.2)",
-    text: "#e2e8f0",
-    muted: "#94a3b8",
-    accent: "#60a5fa",
-    accentSoft: "rgba(96, 165, 250, 0.24)",
-    accentStrong: "rgba(96, 165, 250, 0.44)",
-    danger: "#f87171",
-    dangerSoft: "rgba(248, 113, 113, 0.18)",
-    level0: "#111827",
-    level1: "#1d4ed8",
-    level2: "#2563eb",
-    level3: "#60a5fa",
-    level4: "#93c5fd",
-  },
-  {
-    name: "sunset",
-    bg: "#140f12",
-    panel: "rgba(38, 26, 32, 0.92)",
-    panelStrong: "#22181d",
-    border: "rgba(251, 191, 36, 0.2)",
-    text: "#fef3c7",
-    muted: "#d6b38c",
-    accent: "#f59e0b",
-    accentSoft: "rgba(245, 158, 11, 0.22)",
-    accentStrong: "rgba(245, 158, 11, 0.42)",
-    danger: "#fb7185",
-    dangerSoft: "rgba(251, 113, 133, 0.18)",
-    level0: "#2a1d23",
-    level1: "#7c2d12",
-    level2: "#c2410c",
-    level3: "#f59e0b",
-    level4: "#fbbf24",
-  },
-];
+const THEME_OPTIONS = ["dark", "light"];
 const GLYPHS = {
   "0": [
     "11111",
@@ -189,7 +131,8 @@ const elements = {
   importButton: document.getElementById("import-button"),
   resetDataButton: document.getElementById("reset-data-button"),
   importFileInput: document.getElementById("import-file-input"),
-  modeButtons: Array.from(document.querySelectorAll(".mode-button")),
+  modeButtons: Array.from(document.querySelectorAll("[data-mode]")),
+  themeButtons: Array.from(document.querySelectorAll("[data-theme]")),
   presetButtons: Array.from(document.querySelectorAll(".preset-button")),
 };
 
@@ -208,6 +151,7 @@ function init() {
 function loadState() {
   const fallback = {
     mode: "clock",
+    appearance: "dark",
     currentLabel: "Coding",
     timer: {
       status: "idle",
@@ -248,6 +192,7 @@ function loadState() {
 
 function normalizeState() {
   state.mode = state.mode === "timer" ? "timer" : "clock";
+  state.appearance = THEME_OPTIONS.includes(state.appearance) ? state.appearance : "dark";
   state.timer.status = ["idle", "running", "paused", "finished"].includes(state.timer.status) ? state.timer.status : "idle";
   state.currentLabel = ["Coding", "Studying", "Project", "Other"].includes(state.currentLabel)
     ? state.currentLabel
@@ -310,8 +255,18 @@ function normalizeState() {
 
 function bindEvents() {
   elements.modeButtons.forEach((button) => {
+    if (button.dataset.mode) {
+      button.addEventListener("click", () => {
+        state.mode = button.dataset.mode;
+        saveState();
+        renderAll();
+      });
+    }
+  });
+
+  elements.themeButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      state.mode = button.dataset.mode;
+      state.appearance = button.dataset.theme;
       saveState();
       renderAll();
     });
@@ -358,7 +313,7 @@ function startTicker() {
       }
     }
 
-    renderTheme();
+    renderAppearance();
     renderDisplay();
     renderStatus();
   }, 1000);
@@ -570,7 +525,7 @@ function resetAllData() {
 }
 
 function renderAll() {
-  renderTheme();
+  renderAppearance();
   renderMode();
   renderDisplay();
   renderStatus();
@@ -579,32 +534,10 @@ function renderAll() {
   renderGraph();
 }
 
-function renderTheme() {
-  const themeIndex = Math.floor(Date.now() / 8000) % THEMES.length;
-  const theme = THEMES[themeIndex];
-
-  const themeVars = {
-    bg: theme.bg,
-    panel: theme.panel,
-    "panel-strong": theme.panelStrong,
-    border: theme.border,
-    text: theme.text,
-    muted: theme.muted,
-    accent: theme.accent,
-    "accent-soft": theme.accentSoft,
-    "accent-strong": theme.accentStrong,
-    danger: theme.danger,
-    "danger-soft": theme.dangerSoft,
-    "level-0": theme.level0,
-    "level-1": theme.level1,
-    "level-2": theme.level2,
-    "level-3": theme.level3,
-    "level-4": theme.level4,
-  };
-
-  Object.entries(themeVars).forEach(([key, value]) => {
-    document.documentElement.style.setProperty(`--${key}`, value);
-  });
+function renderAppearance() {
+  const isLight = state.appearance === "light";
+  document.body.classList.toggle("theme-light", isLight);
+  document.body.classList.toggle("theme-dark", !isLight);
 }
 
 function renderMode() {
@@ -613,35 +546,52 @@ function renderMode() {
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
+
+  elements.themeButtons.forEach((button) => {
+    const isActive = button.dataset.theme === state.appearance;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
 }
 
 function renderDisplay() {
   const displayText = state.mode === "clock" ? getCurrentTimeString() : formatDurationAsClock(getDisplayDuration());
   const frameSeed = Math.floor(Date.now() / 1000);
-  const isNegativeDisplay = state.mode === "timer" && state.timer.status === "finished" && getDisplayDuration() < 0;
+  const isNegativeDisplay = state.mode === "timer" && state.timer.status === "finished";
   elements.displayGrid.classList.toggle("is-negative", isNegativeDisplay);
   elements.displayGrid.innerHTML = "";
 
   [...displayText].forEach((character, charIndex) => {
+    if (charIndex > 0) {
+      const spacerGlyph = buildGlyph(["0", "0", "0", "0", "0", "0", "0"]);
+      spacerGlyph.classList.add("gap-glyph");
+      elements.displayGrid.appendChild(spacerGlyph);
+    }
+
     const pattern = GLYPHS[character];
-    const columnCount = Math.max(...pattern.map((row) => row.length));
-    const glyphElement = document.createElement("div");
-    glyphElement.className = "glyph";
-    glyphElement.style.setProperty("--columns", columnCount);
-
-    pattern.forEach((row, rowIndex) => {
-      [...row].forEach((pixel, columnIndex) => {
-        const cell = document.createElement("span");
-        const isLit = pixel === "1";
-        const level = isLit ? getDisplayLevel(charIndex, rowIndex, columnIndex, frameSeed) : 0;
-        cell.className = `display-cell level-${level}${isLit ? " is-lit" : ""}`;
-        cell.style.setProperty("--pulse-delay", `${((charIndex + rowIndex + columnIndex) % 6) * 0.15}s`);
-        glyphElement.appendChild(cell);
-      });
-    });
-
+    const glyphElement = buildGlyph(pattern, charIndex, frameSeed);
     elements.displayGrid.appendChild(glyphElement);
   });
+}
+
+function buildGlyph(pattern, charIndex = 0, frameSeed = 0) {
+  const columnCount = Math.max(...pattern.map((row) => row.length));
+  const glyphElement = document.createElement("div");
+  glyphElement.className = "glyph";
+  glyphElement.style.setProperty("--columns", columnCount);
+
+  pattern.forEach((row, rowIndex) => {
+    [...row].forEach((pixel, columnIndex) => {
+      const cell = document.createElement("span");
+      const isLit = pixel === "1";
+      const level = isLit ? getDisplayLevel(charIndex, rowIndex, columnIndex, frameSeed) : 0;
+      cell.className = `display-cell level-${level}${isLit ? " is-lit" : ""}`;
+      cell.style.setProperty("--pulse-delay", `${((charIndex + rowIndex + columnIndex) % 6) * 0.15}s`);
+      glyphElement.appendChild(cell);
+    });
+  });
+
+  return glyphElement;
 }
 
 function renderStatus() {
