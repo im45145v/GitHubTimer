@@ -416,8 +416,12 @@ function exportData() {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = `github-timer-export-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(anchor);
   anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+    anchor.remove();
+  }, 0);
 }
 
 function importData(event) {
@@ -455,10 +459,14 @@ function importData(event) {
       normalizeState();
       renderAll();
     } catch (error) {
-      window.alert("That file could not be imported.");
+      window.alert(error instanceof Error ? error.message : "That file could not be imported.");
     } finally {
       elements.importFileInput.value = "";
     }
+  };
+  reader.onerror = () => {
+    window.alert("The selected file could not be read.");
+    elements.importFileInput.value = "";
   };
   reader.readAsText(file);
 }
