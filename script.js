@@ -631,14 +631,15 @@ function buildGlyph(pattern, charIndex = 0) {
 }
 
 function getDisplayLevel(charIndex, rowIndex, columnIndex) {
+  const slowCycle = Math.floor(Date.now() / 9000);
+  const colorLevel = 1 + ((charIndex * 5 + rowIndex * 3 + columnIndex + slowCycle) % 4);
+
   if (state.mode === "clock") {
-    const slowCycle = Math.floor(Date.now() / 9000);
-    return 1 + ((charIndex * 5 + rowIndex * 3 + columnIndex + slowCycle) % 4);
+    return colorLevel;
   }
 
-  const progress = getProgressRatio();
-  const base = Math.max(1, Math.ceil(progress * 4));
-  return Math.min(4, Math.max(1, base + ((charIndex + rowIndex + columnIndex) % 2 === 0 ? 0 : -1)));
+  const progressLevel = Math.max(1, Math.ceil(getProgressRatio() * 4));
+  return Math.max(progressLevel, colorLevel);
 }
 
 function renderStatus() {
