@@ -17,9 +17,9 @@
         </p>
       </div>
 
-      <div class="mode-toggle" role="tablist" aria-label="Display mode">
-        <button type="button" class="mode-button is-active" data-mode="clock" aria-selected="true">Clock</button>
-        <button type="button" class="mode-button" data-mode="timer" aria-selected="false">Timer</button>
+      <div class="mode-toggle" aria-label="Display mode">
+        <button type="button" class="mode-button is-active" data-mode="clock" aria-pressed="true">Clock</button>
+        <button type="button" class="mode-button" data-mode="timer" aria-pressed="false">Timer</button>
       </div>
 
       <div class="display-card">
@@ -103,7 +103,7 @@
         </div>
       </div>
 
-      <div id="contribution-graph" class="contribution-graph" aria-label="Focus contribution graph"></div>
+      <div id="contribution-graph" class="contribution-graph" role="list" aria-label="Focus contribution graph"></div>
 
       <div class="graph-footer">
         <span>Less</span>

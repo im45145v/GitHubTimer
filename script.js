@@ -411,6 +411,9 @@ function importData(event) {
   reader.onload = () => {
     try {
       const imported = JSON.parse(reader.result);
+      state.timer.status = "idle";
+      state.timer.targetTime = null;
+      state.timer.pausedAt = null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
       Object.assign(state, loadState());
       normalizeState();
@@ -449,7 +452,7 @@ function renderMode() {
   elements.modeButtons.forEach((button) => {
     const isActive = button.dataset.mode === state.mode;
     button.classList.toggle("is-active", isActive);
-    button.setAttribute("aria-selected", String(isActive));
+    button.setAttribute("aria-pressed", String(isActive));
   });
 }
 
@@ -559,6 +562,8 @@ function renderGraph() {
     const cell = document.createElement("span");
     cell.className = `graph-cell level-${cellData.level}`;
     cell.title = cellData.title;
+    cell.setAttribute("role", "listitem");
+    cell.setAttribute("aria-label", cellData.title);
     elements.contributionGraph.appendChild(cell);
   });
 }
@@ -603,7 +608,7 @@ function formatDurationAsClock(durationMs) {
 }
 
 function formatDuration(durationMs) {
-  const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
   if (totalSeconds === 0) {
     return "0m";
   }
@@ -611,7 +616,7 @@ function formatDuration(durationMs) {
     return `${totalSeconds}s`;
   }
 
-  const totalMinutes = Math.round(totalSeconds / 60);
+  const totalMinutes = Math.floor(totalSeconds / 60);
   if (totalMinutes >= 60) {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
