@@ -158,12 +158,15 @@ function loadState() {
     }
 
     const parsed = JSON.parse(saved);
+    if (!isRecord(parsed)) {
+      return fallback;
+    }
     return {
       ...fallback,
       ...parsed,
       timer: {
         ...fallback.timer,
-        ...(parsed.timer || {}),
+        ...(isRecord(parsed.timer) ? parsed.timer : {}),
       },
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
     };
@@ -197,6 +200,16 @@ function normalizeState() {
   }
 
   if (state.timer.status === "running") {
+    if (!Number.isFinite(state.timer.targetTime)) {
+      state.timer.status = "idle";
+      state.timer.targetTime = null;
+      state.timer.pausedAt = null;
+      state.timer.remainingMs = state.timer.inputMs;
+      syncInputsWithTimer(state.timer.remainingMs);
+      saveState();
+      return;
+    }
+
     const remainingMs = Math.max(0, state.timer.targetTime - Date.now());
     if (remainingMs === 0) {
       finishTimer();
@@ -411,10 +424,25 @@ function importData(event) {
   reader.onload = () => {
     try {
       const imported = JSON.parse(reader.result);
+      if (!isRecord(imported)) {
+        throw new Error("Imported data must be an object.");
+      }
+
+      const importedTimer = isRecord(imported.timer) ? imported.timer : {};
+      const safeImported = {
+        ...imported,
+        timer: {
+          ...importedTimer,
+          status: "idle",
+          targetTime: null,
+          pausedAt: null,
+        },
+      };
+
       state.timer.status = "idle";
       state.timer.targetTime = null;
       state.timer.pausedAt = null;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(imported));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(safeImported));
       Object.assign(state, loadState());
       normalizeState();
       renderAll();
@@ -654,6 +682,10 @@ function getLocalDateKey(date) {
 
 function startOfDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function saveState() {
